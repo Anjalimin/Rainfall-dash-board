@@ -21,38 +21,36 @@ def load_geospatial_data(shapefile_files):
             with open(os.path.join(tmpdir, uploaded_file.name), 'wb') as f:
                 f.write(uploaded_file.read())
         
-        # Check if all shapefile components are uploaded (.shp, .shx, .dbf)
+        # Check if any shapefile component is uploaded
         shapefile_names = [f.name for f in shapefile_files]
-        required_extensions = [".shp", ".shx", ".dbf"]
-        missing_files = [ext for ext in required_extensions if not any(file.endswith(ext) for file in shapefile_names)]
-
-        if missing_files:
-            st.warning(f"Missing shapefile components: {', '.join(missing_files)}. Please upload all related files: .shp, .shx, .dbf.")
-            return None  # Return None if not all components are uploaded
         
-        # Find the .shp file (GeoPandas needs it to read the shapefile)
+        # Check if at least one shapefile component exists
         shapefile_path = None
         for file in shapefile_files:
-            if file.name.endswith(".shp"):
+            if file.name.endswith(".shp") or file.name.endswith(".shx") or file.name.endswith(".dbf"):
                 shapefile_path = file.name
                 break
         
+        # If no shapefile component is found, return None
         if not shapefile_path:
-            raise ValueError("No .shp file found among the uploaded shapefile components.")
-        
-        # Read the shapefile using GeoPandas
-        india_shapefile = gpd.read_file(os.path.join(tmpdir, shapefile_path))
+            st.warning("No shapefile components (.shp, .shx, .dbf) found. Limited map functionality.")
+            return None
 
-        # Set the correct CRS if needed
-        if india_shapefile.crs is None:
-            india_shapefile = india_shapefile.set_crs("EPSG:4326")
-        india_shapefile = india_shapefile.to_crs("EPSG:4326")
-
-        return india_shapefile
+        # Try reading the shapefile using GeoPandas
+        try:
+            india_shapefile = gpd.read_file(os.path.join(tmpdir, shapefile_path))
+            
+            # Set the correct CRS if needed
+            if india_shapefile.crs is None:
+                india_shapefile = india_shapefile.set_crs("EPSG:4326")
+            india_shapefile = india_shapefile.to_crs("EPSG:4326")
+            return india_shapefile
+        except Exception as e:
+            st.error(f"Error reading shapefile: {e}")
+            return None
 
 # Process Rainfall Data (both cumulative and average calculations)
 def process_data(data, start_date, end_date, calc_type):
-    # Ensure that the time coordinate exists and use the correct one
     time_coord = 'TIME' if 'TIME' in data.coords else 'TIME'  # Use correct dimension name
 
     if time_coord not in data.coords:
@@ -68,7 +66,6 @@ def process_data(data, start_date, end_date, calc_type):
     else:
         raise ValueError("Unsupported calculation type. Please choose 'Cumulative' or 'Average'.")
 
-    # Ensure that rainfall_result is a valid xarray DataArray
     if isinstance(rainfall_result, xr.DataArray):
         return rainfall_result
     else:
@@ -76,10 +73,10 @@ def process_data(data, start_date, end_date, calc_type):
 
 # Plot Data on Map
 def plot_rainfall_on_map(RAINFALL, india, vmin, vmax):
-    # Check if RAINFALL is a valid xarray DataArray
     if isinstance(RAINFALL, xr.DataArray):
         fig, ax = plt.subplots(figsize=(10, 10))
-        india.plot(ax=ax, edgecolor='black', facecolor='none')
+        if india is not None:
+            india.plot(ax=ax, edgecolor='black', facecolor='none')
         RAINFALL.plot(ax=ax, cmap='Blues', vmin=vmin, vmax=vmax, cbar_kwargs={'label': 'Rainfall (mm)'})
         plt.title('Rainfall Visualization', fontsize=16)
         plt.xlabel('Longitude')
@@ -97,7 +94,8 @@ def main():
     st.sidebar.header("Upload Data and Configure Options")
     uploaded_nc_file = st.sidebar.file_uploader("Upload Rainfall NetCDF File", type=["nc"])
     shapefile_files = st.sidebar.file_uploader(
-        "Upload Shapefile (Upload at least one related file: .shp, .shx, .dbf, etc.)", type=["shp", "shx", "dbf", "prj"], accept_multiple_files=True
+        "Upload Shapefile (Upload at least one related file: .shp, .shx, .dbf, etc.)", 
+        type=["shp", "shx", "dbf", "prj"], accept_multiple_files=True
     )
 
     start_date = st.sidebar.date_input("Start Date", value=pd.Timestamp("2023-06-01"))
@@ -111,10 +109,6 @@ def main():
             # Load data
             data = load_rainfall_data(uploaded_nc_file)
             india = load_geospatial_data(shapefile_files)
-
-            if india is None:  # Check if geospatial data is valid
-                st.warning("Please upload all required shapefile components (.shp, .shx, .dbf) for geospatial data.")
-                return
 
             # Process the rainfall data
             rainfall_result = process_data(data, start_date, end_date, calc_type)
