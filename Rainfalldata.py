@@ -16,22 +16,36 @@ def load_rainfall_data(uploaded_file):
 @st.cache_data
 def load_geospatial_data(shapefile_files):
     with tempfile.TemporaryDirectory() as tmpdir:
+        # Save uploaded shapefile components into a temporary directory
         for uploaded_file in shapefile_files:
             with open(os.path.join(tmpdir, uploaded_file.name), 'wb') as f:
                 f.write(uploaded_file.read())
         
-        # Find the .shp file among the uploaded files
-        shapefile_candidates = [f.name for f in shapefile_files if f.name.endswith(".shx")]
-        if not shapefile_candidates:
+        # Check for the .shp file and ensure all required files are present
+        shapefile_names = [f.name for f in shapefile_files]
+        required_extensions = [".shp", ".shx", ".dbf"]
+        missing_files = [ext for ext in required_extensions if not any(file.endswith(ext) for file in shapefile_names)]
+
+        if missing_files:
+            raise ValueError(f"Missing shapefile components: {', '.join(missing_files)}")
+        
+        shapefile_path = None
+        for file in shapefile_files:
+            if file.name.endswith(".shp"):
+                shapefile_path = file.name
+                break
+        
+        if not shapefile_path:
             raise ValueError("No .shp file found among the uploaded shapefile components.")
         
-        shapefile_path = shapefile_candidates[0]
+        # Read the shapefile using GeoPandas
         india_shapefile = gpd.read_file(os.path.join(tmpdir, shapefile_path))
 
+        # Set the correct CRS if needed
         if india_shapefile.crs is None:
             india_shapefile = india_shapefile.set_crs("EPSG:4326")
-
         india_shapefile = india_shapefile.to_crs("EPSG:4326")
+
         return india_shapefile
 
 # Process Rainfall Data (both cumulative and average calculations)
