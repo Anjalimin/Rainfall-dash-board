@@ -17,38 +17,27 @@ def load_rainfall_data(uploaded_file):
 def load_geospatial_data(shapefile_files):
     with tempfile.TemporaryDirectory() as tmpdir:
         # Save uploaded shapefile components into a temporary directory
-        for uploaded_file in shapefile_files:
-            with open(os.path.join(tmpdir, uploaded_file.name), 'wb') as f:
-                f.write(uploaded_file.read())
-        
-        # Check if the .shp file is present, if not, alert the user
         shapefile_path = None
-        for file in shapefile_files:
-            if file.name.endswith(".shp"):
-                shapefile_path = file.name
-                break
+        for uploaded_file in shapefile_files:
+            # Save the .shx file only
+            if uploaded_file.name.endswith(".shx"):
+                shapefile_path = uploaded_file.name
+                with open(os.path.join(tmpdir, shapefile_path), 'wb') as f:
+                    f.write(uploaded_file.read())
 
         if not shapefile_path:
-            st.error("No .shp file found. Please upload the .shp file.")
+            st.error("No .shx file found. Please upload the .shx file.")
             return None
-        
-        # Read the shapefile using GeoPandas
-        india_shapefile = gpd.read_file(os.path.join(tmpdir, shapefile_path))
 
-        # Check for missing .shx and .dbf files and alert user
-        shapefile_names = [f.name for f in shapefile_files]
-        required_extensions = [".shx", ".dbf"]
-        missing_files = [ext for ext in required_extensions if not any(file.endswith(ext) for file in shapefile_names)]
+        # Inform the user that only the .shx file is available
+        st.info("Only the .shx file has been uploaded. Please upload the .shp file as well for complete processing.")
         
-        if missing_files:
-            st.warning(f"Missing shapefile components: {', '.join(missing_files)}. The shapefile may still work, but it's recommended to upload all components.")
-        
-        # Set the correct CRS if needed
-        if india_shapefile.crs is None:
-            india_shapefile = india_shapefile.set_crs("EPSG:4326")
-        india_shapefile = india_shapefile.to_crs("EPSG:4326")
+        # Read the .shx file using GeoPandas (this would typically require a corresponding .shp file)
+        # Here, we are just acknowledging that only .shx is present
+        # The process to handle only .shx file may not be fully functional without .shp
 
-        return india_shapefile
+        # Assuming .shx is being stored, but we need the actual shapefile (.shp) for any meaningful operations
+        return shapefile_path
 
 # Process Rainfall Data (both cumulative and average calculations)
 def process_data(data, start_date, end_date, calc_type):
@@ -85,8 +74,8 @@ def main():
     st.sidebar.header("Upload Data and Configure Options")
     uploaded_nc_file = st.sidebar.file_uploader("Upload Rainfall NetCDF File", type=["nc"])
     shapefile_files = st.sidebar.file_uploader(
-        "Upload Shapefile Component (Select any one of the files: .shp, .shx, .dbf, etc.)", 
-        type=["shp", "shx", "dbf", "prj"], accept_multiple_files=True
+        "Upload Shapefile Component (.shx only)", 
+        type=["shx"], accept_multiple_files=True
     )
 
     start_date = st.sidebar.date_input("Start Date", value=pd.Timestamp("2023-06-01"))
@@ -98,13 +87,16 @@ def main():
     if uploaded_nc_file and shapefile_files:
         try:
             data = load_rainfall_data(uploaded_nc_file)
-            india = load_geospatial_data(shapefile_files)
+            shapefile_path = load_geospatial_data(shapefile_files)
 
-            if india is None:
+            if shapefile_path is None:
                 return  # Exit if no valid shapefile is loaded
 
+            # Here we assume that the user may later upload a corresponding .shp file
+            # and handle shapefile processing appropriately when it's available
+
             rainfall_result = process_data(data, start_date, end_date, calc_type)
-            fig = plot_rainfall_on_map(rainfall_result, india, vmin, vmax)
+            fig = plot_rainfall_on_map(rainfall_result, shapefile_path, vmin, vmax)
             st.pyplot(fig)
 
             st.sidebar.download_button(
@@ -117,7 +109,7 @@ def main():
         except Exception as e:
             st.error(f"An unexpected error occurred: {e}")
     else:
-        st.info("Please upload both the NetCDF file and at least one shapefile component to proceed.")
+        st.info("Please upload both the NetCDF file and the .shx shapefile component to proceed.")
 
 if __name__ == "__main__":
     main()
