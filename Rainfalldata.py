@@ -21,22 +21,23 @@ def load_geospatial_data(shapefile_files):
             with open(os.path.join(tmpdir, uploaded_file.name), 'wb') as f:
                 f.write(uploaded_file.read())
         
-        # Check for the .shp file and ensure all required files are present
+        # Check if any required shapefile component is uploaded
         shapefile_names = [f.name for f in shapefile_files]
-        required_extensions = [".shp", ".shx", ".dbf"]
-        missing_files = [ext for ext in required_extensions if not any(file.endswith(ext) for file in shapefile_names)]
-
-        if missing_files:
-            raise ValueError(f"Missing shapefile components: {', '.join(missing_files)}")
         
+        # Find the file that ends with .shp (if it exists)
         shapefile_path = None
         for file in shapefile_files:
             if file.name.endswith(".shp"):
                 shapefile_path = file.name
                 break
+            if file.name.endswith(".shx") or file.name.endswith(".dbf"):
+                # If we find .shx or .dbf, assume that the user will upload the .shp file later
+                shapefile_path = shapefile_names[0]  # We assume the first file uploaded will be the .shp, .shx, or .dbf
+                break
         
+        # Ensure we have found a .shp file to read
         if not shapefile_path:
-            raise ValueError("No .shp file found among the uploaded shapefile components.")
+            raise ValueError("No shapefile component (.shp, .shx, or .dbf) found among the uploaded files.")
         
         # Read the shapefile using GeoPandas
         india_shapefile = gpd.read_file(os.path.join(tmpdir, shapefile_path))
@@ -95,7 +96,7 @@ def main():
     st.sidebar.header("Upload Data and Configure Options")
     uploaded_nc_file = st.sidebar.file_uploader("Upload Rainfall NetCDF File", type=["nc"])
     shapefile_files = st.sidebar.file_uploader(
-        "Upload Shapefile (Upload all related files: .shp, .shx, .dbf, etc.)", type=["shp", "shx", "dbf", "prj"], accept_multiple_files=True
+        "Upload Shapefile (Upload at least one related file: .shp, .shx, .dbf, etc.)", type=["shp", "shx", "dbf", "prj"], accept_multiple_files=True
     )
 
     start_date = st.sidebar.date_input("Start Date", value=pd.Timestamp("2023-06-01"))
