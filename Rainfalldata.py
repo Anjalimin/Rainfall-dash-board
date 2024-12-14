@@ -21,23 +21,24 @@ def load_geospatial_data(shapefile_files):
             with open(os.path.join(tmpdir, uploaded_file.name), 'wb') as f:
                 f.write(uploaded_file.read())
         
-        # Check if any required shapefile component is uploaded
+        # Check if all shapefile components are uploaded (.shp, .shx, .dbf)
         shapefile_names = [f.name for f in shapefile_files]
+        required_extensions = [".shp", ".shx", ".dbf"]
+        missing_files = [ext for ext in required_extensions if not any(file.endswith(ext) for file in shapefile_names)]
+
+        if missing_files:
+            st.warning(f"Missing shapefile components: {', '.join(missing_files)}. Please upload all related files: .shp, .shx, .dbf.")
+            return None  # Return None if not all components are uploaded
         
-        # Find the file that ends with .shp (if it exists)
+        # Find the .shp file (GeoPandas needs it to read the shapefile)
         shapefile_path = None
         for file in shapefile_files:
             if file.name.endswith(".shp"):
                 shapefile_path = file.name
                 break
-            if file.name.endswith(".shx") or file.name.endswith(".dbf"):
-                # If we find .shx or .dbf, assume that the user will upload the .shp file later
-                shapefile_path = shapefile_names[0]  # We assume the first file uploaded will be the .shp, .shx, or .dbf
-                break
         
-        # Ensure we have found a .shp file to read
         if not shapefile_path:
-            raise ValueError("No shapefile component (.shp, .shx, or .dbf) found among the uploaded files.")
+            raise ValueError("No .shp file found among the uploaded shapefile components.")
         
         # Read the shapefile using GeoPandas
         india_shapefile = gpd.read_file(os.path.join(tmpdir, shapefile_path))
@@ -110,6 +111,10 @@ def main():
             # Load data
             data = load_rainfall_data(uploaded_nc_file)
             india = load_geospatial_data(shapefile_files)
+
+            if india is None:  # Check if geospatial data is valid
+                st.warning("Please upload all required shapefile components (.shp, .shx, .dbf) for geospatial data.")
+                return
 
             # Process the rainfall data
             rainfall_result = process_data(data, start_date, end_date, calc_type)
