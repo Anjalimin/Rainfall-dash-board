@@ -9,4 +9,6 @@ pyproj
 rtree  
 netCDF4
 h5netcdf
+scipy
+
 
