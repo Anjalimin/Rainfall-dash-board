@@ -24,27 +24,28 @@ def load_geospatial_data(shapefile_files):
         # Check if any shapefile component is uploaded
         shapefile_names = [f.name for f in shapefile_files]
         
-        # Check if at least one shapefile component exists
+        # Look for the .shp file to begin reading
         shapefile_path = None
         for file in shapefile_files:
-            if file.name.endswith(".shp") or file.name.endswith(".shx") or file.name.endswith(".dbf"):
+            if file.name.endswith(".shp"):
                 shapefile_path = file.name
                 break
         
-        # If no shapefile component is found, return None
+        # If no .shp file found, prompt the user to upload the full set
         if not shapefile_path:
-            st.warning("No shapefile components (.shp, .shx, .dbf) found. Limited map functionality.")
+            st.warning("No shapefile (.shp) found. The map might not work as expected.")
             return None
 
         # Try reading the shapefile using GeoPandas
         try:
             india_shapefile = gpd.read_file(os.path.join(tmpdir, shapefile_path))
-            
-            # Set the correct CRS if needed
+
+            # Check if the shapefile has a valid CRS
             if india_shapefile.crs is None:
-                india_shapefile = india_shapefile.set_crs("EPSG:4326")
+                india_shapefile = india_shapefile.set_crs("EPSG:4326", allow_override=True)
             india_shapefile = india_shapefile.to_crs("EPSG:4326")
             return india_shapefile
+
         except Exception as e:
             st.error(f"Error reading shapefile: {e}")
             return None
