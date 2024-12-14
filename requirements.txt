@@ -7,4 +7,6 @@ shapely
 fiona
 pyproj 
 rtree  
-netCDF4  
+netCDF4
+h5netcdf
+
