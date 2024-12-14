@@ -21,7 +21,7 @@ def load_geospatial_data(shapefile_files):
                 f.write(uploaded_file.read())
         
         # Find the .shp file among the uploaded files
-        shapefile_candidates = [f.name for f in shapefile_files if f.name.endswith(".shp")]
+        shapefile_candidates = [f.name for f in shapefile_files if f.name.endswith(".shx")]
         if not shapefile_candidates:
             raise ValueError("No .shp file found among the uploaded shapefile components.")
         
