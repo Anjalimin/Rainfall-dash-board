@@ -92,10 +92,10 @@ def main():
     st.title("IMD Rainfall Data Visualization")
 
     # Sidebar options
-    st.sidebar.header("Upload Data and Configure Options")
-    uploaded_nc_file = st.sidebar.file_uploader("Upload Rainfall NetCDF File", type=["nc"])
+    st.sidebar.header("Upload Data")
+    uploaded_nc_file = st.sidebar.file_uploader("Upload Rainfall NC File", type=["nc"])
     shapefile_files = st.sidebar.file_uploader(
-        "Upload Shapefile (Upload at least one related file: .shp, .shx, .dbf, etc.)", 
+        "Upload Shapefile (Upload file:)", 
         type=["shp", "shx", "dbf", "prj"], accept_multiple_files=True
     )
 
@@ -129,7 +129,7 @@ def main():
         except Exception as e:
             st.error(f"An unexpected error occurred: {e}")
     else:
-        st.info("Please upload both the NetCDF file and shapefile components to proceed.")
+        st.info("Please upload both the NC file and shapefile to proceed.")
 
 if __name__ == "__main__":
     main()
