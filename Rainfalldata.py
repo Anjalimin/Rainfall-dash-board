@@ -20,7 +20,12 @@ def load_geospatial_data(shapefile_files):
             with open(os.path.join(tmpdir, uploaded_file.name), 'wb') as f:
                 f.write(uploaded_file.read())
         
-        shapefile_path = [f.name for f in shapefile_files if f.name.endswith(".shp")][0]
+        # Find the .shp file among the uploaded files
+        shapefile_candidates = [f.name for f in shapefile_files if f.name.endswith(".shp")]
+        if not shapefile_candidates:
+            raise ValueError("No .shp file found among the uploaded shapefile components.")
+        
+        shapefile_path = shapefile_candidates[0]
         india_shapefile = gpd.read_file(os.path.join(tmpdir, shapefile_path))
 
         if india_shapefile.crs is None:
@@ -87,8 +92,10 @@ def main():
                 data=rainfall_result.to_dataframe().to_csv(),
                 file_name="processed_rainfall_data.csv"
             )
-        except Exception as e:
+        except ValueError as e:
             st.error(f"An error occurred: {e}")
+        except Exception as e:
+            st.error(f"An unexpected error occurred: {e}")
     else:
         st.info("Please upload both the NetCDF file and shapefile components to proceed.")
 
