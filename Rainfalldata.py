@@ -52,13 +52,13 @@ def load_geospatial_data(shapefile_files):
 
 # Process Rainfall Data (both cumulative and average calculations)
 def process_data(data, start_date, end_date, calc_type):
-    time_coord = 'TIME' if 'TIME' in data.coords else 'TIME'  # Use correct dimension name
+    time_coord = 'TIME' if 'TIME' in data.coords else 'time'  # Use correct dimension name
 
     if time_coord not in data.coords:
         raise ValueError(f"'{time_coord}' coordinate not found. Please check the dataset format.")
 
     # Slice the data by time range
-    data = data.sel(TIME=slice(start_date, end_date))
+    data = data.sel({time_coord: slice(start_date, end_date)})
 
     if calc_type == 'Cumulative':
         rainfall_result = data['RAINFALL'].sum(dim=time_coord)
@@ -102,8 +102,6 @@ def main():
     start_date = st.sidebar.date_input("Start Date", value=pd.Timestamp("2023-06-01"))
     end_date = st.sidebar.date_input("End Date", value=pd.Timestamp("2023-09-30"))
     calc_type = st.sidebar.selectbox("Select Calculation", ['Cumulative', 'Average'])
-    vmin = st.sidebar.number_input("Min Value for Color Scale", value=0)
-    vmax = st.sidebar.number_input("Max Value for Color Scale", value=1200)
 
     if uploaded_nc_file and shapefile_files:
         try:
@@ -113,6 +111,14 @@ def main():
 
             # Process the rainfall data
             rainfall_result = process_data(data, start_date, end_date, calc_type)
+
+            # Dynamically calculate min/max for color scale
+            rainfall_min = float(rainfall_result.min().values)
+            rainfall_max = float(rainfall_result.max().values)
+
+            # Update the sidebar with dynamic values
+            vmin = st.sidebar.number_input("Min Value for Color Scale", value=rainfall_min)
+            vmax = st.sidebar.number_input("Max Value for Color Scale", value=rainfall_max)
 
             # Plot the rainfall data on the map
             fig = plot_rainfall_on_map(rainfall_result, india, vmin, vmax)
