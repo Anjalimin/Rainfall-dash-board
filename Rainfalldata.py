@@ -44,7 +44,7 @@ def process_data(data, start_date, end_date, calc_type):
     if 'TIME' not in data.coords:
         raise ValueError("'TIME' coordinate not found. Please check the dataset format.")
 
-    data = data.sel(time=slice(start_date, end_date))
+    data = data.sel(TIME=slice(start_date, end_date))
 
     if calc_type == 'Cumulative':
         rainfall_result = data['RAINFALL'].sum(dim='TIME')
