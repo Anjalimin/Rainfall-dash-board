@@ -52,7 +52,7 @@ def load_geospatial_data(shapefile_files):
 # Process Rainfall Data (both cumulative and average calculations)
 def process_data(data, start_date, end_date, calc_type):
     # Ensure that the time coordinate exists and use the correct one
-    time_coord = 'time' if 'time' in data.coords else 'TIME'  # Use correct dimension name
+    time_coord = 'TIME' if 'TIME' in data.coords else 'TIME'  # Use correct dimension name
 
     if time_coord not in data.coords:
         raise ValueError(f"'{time_coord}' coordinate not found. Please check the dataset format.")
