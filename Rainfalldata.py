@@ -50,8 +50,8 @@ def load_geospatial_data(shapefile_files):
 
 # Process Rainfall Data (both cumulative and average calculations)
 def process_data(data, start_date, end_date, calc_type):
-    if 'time' not in data.coords:
-        raise ValueError("'time' coordinate not found. Please check the dataset format.")
+    if 'TIME' not in data.coords:
+        raise ValueError("'TIME' coordinate not found. Please check the dataset format.")
 
     data = data.sel(time=slice(start_date, end_date))
 
