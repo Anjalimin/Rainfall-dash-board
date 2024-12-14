@@ -56,9 +56,9 @@ def process_data(data, start_date, end_date, calc_type):
     data = data.sel(time=slice(start_date, end_date))
 
     if calc_type == 'Cumulative':
-        rainfall_result = data['RAINFALL'].sum(dim='time')
+        rainfall_result = data['RAINFALL'].sum(dim='TIME')
     elif calc_type == 'Average':
-        rainfall_result = data['RAINFALL'].mean(dim='time')
+        rainfall_result = data['RAINFALL'].mean(dim='TIME')
     else:
         raise ValueError("Unsupported calculation type. Please choose 'Cumulative' or 'Average'.")
 
