@@ -21,26 +21,28 @@ def load_geospatial_data(shapefile_files):
             with open(os.path.join(tmpdir, uploaded_file.name), 'wb') as f:
                 f.write(uploaded_file.read())
         
-        # Check for the .shp file and ensure all required files are present
-        shapefile_names = [f.name for f in shapefile_files]
-        required_extensions = [".shp", ".shx", ".dbf"]
-        missing_files = [ext for ext in required_extensions if not any(file.endswith(ext) for file in shapefile_names)]
-
-        if missing_files:
-            raise ValueError(f"Missing shapefile components: {', '.join(missing_files)}")
-        
+        # Check if the .shp file is present, if not, alert the user
         shapefile_path = None
         for file in shapefile_files:
             if file.name.endswith(".shp"):
                 shapefile_path = file.name
                 break
-        
+
         if not shapefile_path:
-            raise ValueError("No .shp file found among the uploaded shapefile components.")
+            st.error("No .shp file found. Please upload the .shp file.")
+            return None
         
         # Read the shapefile using GeoPandas
         india_shapefile = gpd.read_file(os.path.join(tmpdir, shapefile_path))
 
+        # Check for missing .shx and .dbf files and alert user
+        shapefile_names = [f.name for f in shapefile_files]
+        required_extensions = [".shx", ".dbf"]
+        missing_files = [ext for ext in required_extensions if not any(file.endswith(ext) for file in shapefile_names)]
+        
+        if missing_files:
+            st.warning(f"Missing shapefile components: {', '.join(missing_files)}. The shapefile may still work, but it's recommended to upload all components.")
+        
         # Set the correct CRS if needed
         if india_shapefile.crs is None:
             india_shapefile = india_shapefile.set_crs("EPSG:4326")
@@ -83,7 +85,8 @@ def main():
     st.sidebar.header("Upload Data and Configure Options")
     uploaded_nc_file = st.sidebar.file_uploader("Upload Rainfall NetCDF File", type=["nc"])
     shapefile_files = st.sidebar.file_uploader(
-        "Upload Shapefile (Upload all related files: .shp, .shx, .dbf, etc.)", type=["shp", "shx", "dbf", "prj"], accept_multiple_files=True
+        "Upload Shapefile Component (Select any one of the files: .shp, .shx, .dbf, etc.)", 
+        type=["shp", "shx", "dbf", "prj"], accept_multiple_files=True
     )
 
     start_date = st.sidebar.date_input("Start Date", value=pd.Timestamp("2023-06-01"))
@@ -96,6 +99,9 @@ def main():
         try:
             data = load_rainfall_data(uploaded_nc_file)
             india = load_geospatial_data(shapefile_files)
+
+            if india is None:
+                return  # Exit if no valid shapefile is loaded
 
             rainfall_result = process_data(data, start_date, end_date, calc_type)
             fig = plot_rainfall_on_map(rainfall_result, india, vmin, vmax)
@@ -111,7 +117,7 @@ def main():
         except Exception as e:
             st.error(f"An unexpected error occurred: {e}")
     else:
-        st.info("Please upload both the NetCDF file and shapefile components to proceed.")
+        st.info("Please upload both the NetCDF file and at least one shapefile component to proceed.")
 
 if __name__ == "__main__":
     main()
